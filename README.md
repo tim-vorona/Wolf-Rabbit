@@ -1,7 +1,7 @@
 # Wolf-Rabbit
 The competition between two neural networks (a wofl and a rabbit) at the sphere. The wolf chases the rabbit and the problem is to synthesize optimal controls for both units. 
 
-Continouos control problem, both units and the physics are implenmented in Tenforflow.
+Continouos control problem, both units and the physics are implenmented in Tenforflow (< 2.0).
  
 
 
