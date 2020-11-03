@@ -2,4 +2,5 @@
 The competition between two neural networks (a wofl and a rabbit) at the sphere. 
 
 
-[text.docx](https://github.com/tim-vorona/Wolf-Rabbit/files/5483158/text.docx)
+![wr](https://user-images.githubusercontent.com/73900267/98024297-1c4dce00-1dd6-11eb-8a18-9e3db4ef6671.jpg)
+
