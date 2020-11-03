@@ -10,32 +10,6 @@ import os
 
 plt.rcParams['animation.ffmpeg_path'] = "C:\\ProgramData\\Anaconda3\\pkgs\\ffmpeg-4.1.3-h6538335_0\\Library\\bin\\ffmpeg"
 
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-def data_iterator(raw_data, batch_size, win_size):
-    (data_len, m) = raw_data.shape
-    batch_len = data_len // batch_size
-    data = np.zeros([batch_size, batch_len, m], dtype=np.float32)
-    for i in range(batch_size):
-        data[i, :, :] = raw_data[batch_len * i : batch_len * (i + 1), :]
-
-    epoch_size = (batch_len - 1) // win_size
-
-    if epoch_size == 0:
-        raise ValueError("epoch_size == 0, decrease batch_size or num_steps")
-
-# The code below avoids replication of data during its batching.
-# Especially actual for TANECO prognostic CNN architecture with multiple data replication!!
-    for j in range(epoch_size):
-        x = data[:, j*win_size : (j + 1)*win_size, :]
-        yield x
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-def gen_epochs(data, n, win_size, batch_size):
-    for i in range(n):
-        yield data_iterator(data, batch_size, win_size)
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 def spheric(p):
     teta, phi = p[:, 0 : 1], p[:, 1 : 2]
     x = tf.math.multiply(tf.sin(teta), tf.cos(phi))
@@ -43,16 +17,14 @@ def spheric(p):
     z = tf.cos(teta)
     out = tf.concat([x, y, z], axis=1)
     return out
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def spheric_num(p):
     teta, phi = p[0], p[1]
     x = np.sin(teta)*np.cos(phi)
     y = np.sin(teta)*np.sin(phi)
     z = np.cos(teta)
     return [x, y, z]
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def physics_r(tensors):
     ytm1 = tensors[0][:, :2]
     vtm1 = tensors[0][:, 2:]
@@ -66,8 +38,7 @@ def physics_r(tensors):
     y2 = ytm1[:, 1] + dt_r*tf.math.multiply(vt[:, 1 : 2], factor)
     yt = tf.concat([y1, y2], axis=1)
     return yt, v
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def physics_w(tensors):
     ytm1 = tensors[0][:, :2]
     vtm1 = tensors[0][:, 2:]
@@ -81,15 +52,13 @@ def physics_w(tensors):
     y2 = ytm1[:, 1 : 2] + dt_w*tf.math.multiply(vt[:, 1 : 2], factor)
     yt = tf.concat([y1, y2], axis=1)
     return yt, v
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def direct_metric(tensors):
     diff = tensors[0] - tensors[1]
     weight = 5
     out = weight*tf.norm(diff, axis=-1, keepdims=True)
     return out
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def inverse_metric(tensors):
     diff = tensors[0] - tensors[1]
     norm = tf.norm(diff, axis=-1, keepdims=True)
@@ -97,8 +66,7 @@ def inverse_metric(tensors):
     eps = 0.1
     out = 1.0/(eps + tf.sqrt(norm))
     return out
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 class TrackingCell(tf.nn.rnn_cell.RNNCell):
 
     def __init__(self, num_units=10, e_dim=3, inverse_metric=False, **kwargs):
@@ -146,15 +114,13 @@ class TrackingCell(tf.nn.rnn_cell.RNNCell):
         new_state = (state_nn_t, state_F_t, state_J_t)
         output = (J, y3)
         return output, new_state
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def reset_graph():
     global sess
     if 'sess' in globals() and sess:
         sess.close()
     tf.reset_default_graph()
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def tracking_graph(scope=None, num_units=10, e_dim=3, window_size=128, batch_size=1, learning_rate=1e-3, inverse_metric=False):
 
     with tf.name_scope(scope):
@@ -180,8 +146,7 @@ def tracking_graph(scope=None, num_units=10, e_dim=3, window_size=128, batch_siz
         G = dict(x=x, J=J, y=y, init_state=init_state, final_state=final_state,
                  loss=loss, train_step=train_step)
     return G
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def train_networks(R, W, window_size=128, batch_size=1, watch=False, verbose=True, save=False):
     tf.set_random_seed(1111)
     with tf.Session() as sess:
@@ -261,8 +226,7 @@ def train_networks(R, W, window_size=128, batch_size=1, watch=False, verbose=Tru
             saver.save(sess, model_dir + model_name)
 
     return training_losses, position_r, position_w
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def to_plot_all(x, y, speed_factor=3, fig_num=1, video_write=False, filename='my_movie.mp4'):
 
     x = np.vstack(x)
@@ -317,8 +281,7 @@ def to_plot_all(x, y, speed_factor=3, fig_num=1, video_write=False, filename='my
         writer.cleanup()
 
     return []
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 def plot_sphere(radius, axes):
     ds = 0.1
     Phi = np.arange(-2 * math.pi, 2 * math.pi, ds)
@@ -331,8 +294,7 @@ def plot_sphere(radius, axes):
     rgb = ls.shade(Z, cmap=plt.get_cmap('bone'))
     surf = axes.plot_surface(X, Y, Z, linewidth=0, cmap='bone', alpha=0.1, facecolors=rgb)
     return []
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 #GPU/CPU usage for graph computations
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -341,8 +303,10 @@ gpuflag = 1
 if gpuflag == 0:
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-model_dir = 'F:\\PythonFiles\\RecursiveNNTest\\Model\\'
-model_name = 'WRmodel'
+dir_path = os.path.dirname(os.path.realpath(__file__))
+model_dir = dir_path + '\\Model'
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
 # model_topology = os.path.join(model_dir, model_name + '.json')
 # model_weights = os.path.join(model_dir, model_name + '.hdf5')
 
